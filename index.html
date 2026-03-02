@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Human or AI? Quiz</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+      width: 100%;
+      max-width: 740px;
+      overflow: hidden;
+    }
+
+    /* ── Progress bar ── */
+    .progress-track { height: 5px; background: #e5e7eb; }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #a855f7);
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+
+    /* ── Start screen ── */
+    .start-screen {
+      padding: 56px 40px;
+      text-align: center;
+    }
+    .start-icon {
+      font-size: 3rem;
+      margin-bottom: 20px;
+    }
+    .start-screen h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+    .start-screen p {
+      color: #6b7280;
+      font-size: 1rem;
+      line-height: 1.7;
+      max-width: 460px;
+      margin: 0 auto 36px;
+    }
+
+    /* ── Quiz screen ── */
+    .quiz-header {
+      padding: 24px 32px 18px;
+      border-bottom: 1px solid #f3f4f6;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+    .quiz-header h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #111827;
+    }
+    .question-count {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      font-weight: 500;
+    }
+    .quiz-body { padding: 28px 32px 32px; }
+
+    .passage-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      margin-bottom: 10px;
+    }
+    .passage-box {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-left: 4px solid #6366f1;
+      border-radius: 10px;
+      padding: 20px 22px;
+      font-size: 0.945rem;
+      line-height: 1.8;
+      color: #374151;
+      max-height: 270px;
+      overflow-y: auto;
+      margin-bottom: 26px;
+      scroll-behavior: smooth;
+    }
+    .passage-box::-webkit-scrollbar { width: 5px; }
+    .passage-box::-webkit-scrollbar-track { background: transparent; }
+    .passage-box::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+    .question-label {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #111827;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* ── Answer buttons ── */
+    .answer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .choice-btn {
+      padding: 20px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 14px;
+      background: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      line-height: 1;
+    }
+    .choice-btn .btn-icon { font-size: 1.4rem; }
+    .choice-btn:hover:not(:disabled) {
+      border-color: #6366f1;
+      background: #eef2ff;
+      color: #4338ca;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(99,102,241,0.15);
+    }
+    .choice-btn:disabled { cursor: default; }
+    .choice-btn.correct {
+      border-color: #16a34a;
+      background: #dcfce7;
+      color: #166534;
+    }
+    .choice-btn.incorrect {
+      border-color: #dc2626;
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .choice-btn.reveal {
+      border-color: #16a34a;
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    /* ── Feedback ── */
+    .feedback-box {
+      border-radius: 10px;
+      padding: 13px 18px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .feedback-box.show { display: flex; }
+    .feedback-box.correct { background: #dcfce7; color: #166534; }
+    .feedback-box.incorrect { background: #fee2e2; color: #991b1b; }
+
+    /* ── Primary button ── */
+    .primary-btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      letter-spacing: 0.01em;
+    }
+    .primary-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .primary-btn.center { max-width: 220px; margin: 0 auto; }
+
+    /* ── Results screen ── */
+    .results-screen {
+      padding: 56px 40px;
+      text-align: center;
+    }
+    .score-ring {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 28px;
+      color: #fff;
+      box-shadow: 0 8px 32px rgba(99,102,241,0.35);
+    }
+    .score-big { font-size: 3.25rem; font-weight: 800; line-height: 1; }
+    .score-denom { font-size: 1rem; opacity: 0.8; margin-top: 2px; }
+    .results-screen h2 { font-size: 1.6rem; font-weight: 800; color: #111827; margin-bottom: 10px; }
+    .results-screen .results-msg { color: #6b7280; line-height: 1.7; margin-bottom: 36px; font-size: 1rem; }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <!-- ── START SCREEN ── -->
+  <div id="startScreen" class="start-screen">
+    <div class="start-icon">🤔</div>
+    <h1>Human or AI?</h1>
+    <p>You'll be shown <strong>10 passages</strong>. For each one, decide whether it was written by a <strong>human</strong> or generated by <strong>AI</strong>. You'll find out after every answer.</p>
+    <button class="primary-btn center" onclick="startQuiz()">Start Quiz</button>
+  </div>
+
+  <!-- ── QUIZ SCREEN ── -->
+  <div id="quizScreen" class="hidden">
+    <div class="quiz-header">
+      <h2>Human or AI?</h2>
+      <span class="question-count" id="questionCount">Question 1 of 10</span>
+    </div>
+    <div class="quiz-body">
+      <div class="passage-label">Read the passage below</div>
+      <div class="passage-box" id="passageText"></div>
+      <div class="question-label">Was this written by a human or AI?</div>
+      <div class="answer-grid">
+        <button class="choice-btn" id="humanBtn" onclick="selectAnswer('Human')">
+          <span class="btn-icon">🧑</span> Human
+        </button>
+        <button class="choice-btn" id="aiBtn" onclick="selectAnswer('AI')">
+          <span class="btn-icon">🤖</span> AI
+        </button>
+      </div>
+      <div class="feedback-box" id="feedbackBox"></div>
+      <button class="primary-btn hidden" id="nextBtn" onclick="nextQuestion()">Next Question →</button>
+    </div>
+  </div>
+
+  <!-- ── RESULTS SCREEN ── -->
+  <div id="resultsScreen" class="results-screen hidden">
+    <div class="score-ring">
+      <span class="score-big" id="scoreNum">0</span>
+      <span class="score-denom">/ 10</span>
+    </div>
+    <h2 id="resultsHeading"></h2>
+    <p class="results-msg" id="resultsMsg"></p>
+    <button class="primary-btn center" onclick="restartQuiz()">Play Again</button>
+  </div>
+</div>
+
+<script>
+  /* ───────────────────────────────────────────────
+     QUESTION DATA
+  ─────────────────────────────────────────────── */
+  const group1 = [
+    {
+      text: `Throughout our lives, we have grown accustomed to surveillance due to its assimilation into our daily lives. Constantly, we are watched and monitored by big corporations or governing bodies, and, quite frankly, there is very little we can do about it. This surveillance, as I noticed recently, has struck me with a small amount of paranoia. I first felt it after seeing the news on the transfer of Tik Tok's ownership to the American Government and their ability to change our algorithms to fit their propaganda, or their wanted perspective on world issues.`,
+      answer: "Human"
+    },
+    {
+      text: `Ever since starting this class, I've been more vigilant about observing the surveillance theater at Creighton. I believe the most obvious and obnoxious example of surveillance on campus is Public Safety. Without doubt I see public safety vehicles and employees daily. The second most obvious for me is the constant scanning of Student ID cards. When I go to eat, my dorm, class, and all the above I must scan my ID card. Even when using Creighton's Wi-Fi I feel I'm being watched.`,
+      answer: "Human"
+    },
+    {
+      text: `I had a sudden thought that it was weird how normalized location sharing has become. It was then that I felt the Gaze. I felt gross and icky when I thought about my location always being available. It meant that I was never actually alone; at any moment, someone could be watching me move. This is when I started feeling the chilling effect. I started going off campus less. I didn't want them questioning my movements, even though there was nothing nefarious going on.`,
+      answer: "Human"
+    },
+    {
+      text: `Just about every single part of our online day is tracked and logged. The first time it hit me is when we are talking about data from just being connected on the internet. There is so much identifying information on us as we use the web. This information is always shared, and we don't even realize it, and it is scary knowing that much information about me is out there online, it made me feel this lack of privacy and it is very unsettling.`,
+      answer: "Human"
+    },
+    {
+      text: `Liquid surveillance has poured into every aspect of our lives, and it will continue to grow. It will continue to seep into more aspects of who we are with the advantage of technology. This helps me understand how much surveillance is around me in my everyday life. It is invisible most of the time. I am used to surveillance in my life, which is a scary concept to wrap my head around. Surveillance is watching and collecting data in order to influence behavior. My social media influences my behavior, but it has become normalized for me that I don't care if I'm being surveilled.`,
+      answer: "Human"
+    },
+    {
+      text: `I never thought about how my feed is designed from my interests and preferences. I only started really realizing this when I liked a post about the HBO series Heated Rivalries, which I have never seen before. Before I knew it, a lot of posts about Heated Rivalries and hockey started to pop up on my feed even though I hadn't watched either. This made me realize the kind of filter bubble that was being formed on Instagram and made me think about a couple of things. What else had they been tracking? And what was I supposed to do in this situation?`,
+      answer: "Human"
+    },
+    {
+      text: `I have learned that surveillance isn't just about being spied on with secret cameras in hidden spots. It is about our culture allowing massive amounts of data to be tracked by third parties and governments for their benefits. We are surveilled so much nowadays because it is convenient for us.`,
+      answer: "Human"
+    },
+    {
+      text: `My ID card grants me access to locations such as dorms, buildings, and dining halls. Initially, I did not perceive these ID cards as a form of surveillance. After two months of my data surveillance class, I have learned that these ID cards are most definitely a form of surveillance. The act of students scanning their ID cards has turned into a surveillance practice we all do and cannot avoid. Surveillance cultures are created by society's culture and what they deem culturally appropriate in society.`,
+      answer: "Human"
+    },
+    {
+      text: `I've come to recognize how we're okay with certain surveillance practices due to societal beliefs about them and what is considered okay, otherwise known as surveillance imaginaries. I don't mind being watched by a flood of cameras on Creighton's campus because the societal view is that it's okay to be watched for security purposes. This also taps into securitization and how we're willing to trade our privacy for a greater sense of safety and protection.`,
+      answer: "Human"
+    },
+    {
+      text: `What I've learned so far in this class about surveillance in everyday life is that surveillance has become so normalized that we no longer question it or see it as a threat. Surveillance is so ingrained in our lives that even though it is constantly surrounding us, we don't even realize it many of the times. When this happens, more surveillance methods are put in place, especially in times of disaster and chaos.`,
+      answer: "Human"
+    },
+    {
+      text: `Some of the procedures airport security uses are: ID verification, body scanners, and data matching, which are surveillance practices because they are concrete methods used to monitor passengers. These practices collect and analyze information about bodies, belongings, and movement to sort travelers by perceived risk. Most people remove their shoes, submit to scans, and share personal information with little resistance because security monitoring is widely seen as necessary for safety and efficiency. This cultural acceptance helps normalize constant observation, so surveillance is experienced less as an intrusion and more as an expected part of mobility.`,
+      answer: "Human"
+    },
+    {
+      text: `When we talked about this in class, we just keep listing off some of the behaviors that are tracked each day. It made me personally feel slightly uncomfortable with everything that I do in my daily life is being tracked and taken note of by a larger company that may want that data. This forced us really to think about our behaviors on larger platforms such as Instagram and surveilling what others are doing in their lives, or rather, what they would want us to see about them.`,
+      answer: "Human"
+    },
+    {
+      text: `By now seeing that there is more surveillance than I thought, I now have a feeling of always being watched and judged which affects how I act and what I do. This is called the gaze which we learned in class. Though I try and don't let this affect me, there is no doubt that it has and will continue to affect me. This helps me understand surveillance more because I can see more of what kind of surveillance is being used even though I may be affected by it.`,
+      answer: "Human"
+    },
+    {
+      text: `I have started to notice the amount of location tracking my phone does. I went to the grocery store three nights in a row and then the next day around the same time I had been going to the store my Google Maps app sent me a notification talking about things that people are doing at that location. I have gotten these notifications before but I usually just ignore them and don't think to hard about it, but after taking this class I thought about how much data collection is required to send me that notification.`,
+      answer: "Human"
+    },
+    {
+      text: `The surveillance class has helped me to see that my data is meaningful. I used to ignore the fact that people were tracking me because I never thought my specific data would make a difference in the surplus of information. I know now that my data makes an impact. For example, I recognize now that if something were to happen on campus, they could see where I was at that exact moment.`,
+      answer: "Human"
+    },
+    {
+      text: `This class has made me very aware of the surveillance we experience every single day. One of the most prominent surveillance tools that I really wasn't fully aware of was my phone. I was unaware of all the apps on my phone that were able to have and track my exact location, even if it wasn't on, and I didn't know that by law every phone required GPS services to be on at all times. It is the apps that had access to my location even while the app is not open that freaked me out.`,
+      answer: "Human"
+    },
+    {
+      text: `The first concept that helped me understand what was going on was function creep, because when it came to backlogged info, the point of it was to save old data, so if you wanted to find something you lost you could go through the backlog and find it. This went out of had like function creep where instead now apple is using that backlog to sell it to other companies for profit so they can use your info for directed ads.`,
+      answer: "Human"
+    },
+    {
+      text: `Looking through all of the privacy settings on my phone really made me realize how much information we give to app and website companies. A lot of the data we give to them is even personal data like our name, birthday, and even our address or location. App and website companies also collect mass amounts of data on our behaviors. This mainly includes posts we like, save, or share. Our behaviors on these posts then create an algorithm that is curated to each person based on what the algorithm thinks we are interested in.`,
+      answer: "Human"
+    },
+    {
+      text: `The amount of apps that had access to my location, even if just set to "while using" was actually a bit jolting and I felt very watched. Before I started counting how many apps had access to my location I did not think it was going to be that many. I sat back in my chair for a moment and just thought to myself how many different companies and people had access to my location because of all of the apps that did. I felt scared and paranoid and shocked all at once.`,
+      answer: "Human"
+    },
+    {
+      text: `The class has expanded my understanding about how present surveillance really is in our everyday lives. In addition to Bluetooth allowing people to track your location, it can also be a way that hackers can steal your data in an act called Bluesnarfing. They find vulnerabilities in the Bluetooth and access sensitive information on your device. This has helped me be more cautious of the permissions that I give my devices and in what scenarios I keep them turned on or off.`,
+      answer: "Human"
+    },
+    {
+      text: `In this surveillance class, we have learned more about the daily surveillance in our lives that may not be flagged as surveillance at first. One specific moment of surveillance that I have experienced since the class started is in my dorm building. They have recently installed a ring doorbell camera at the door to enter the dorm living area. I noticed fairly soon after it was installed. This made me feel watched and tracked. It felt like they were trying to keep tabs on when I was entering my building and when I was leaving it and even who I was with at the time.`,
+      answer: "Human"
+    },
+    {
+      text: `One specific moment I can recall of peer surveillance is when I met a boy at a party on a random day of the semester. I gave him my snapchat. I woke up to a follow request on instagram which is not unusual, but shows that he intentionally searched my profile. Two months later I got a notification that he liked an instagram post from months prior. This was likely an unintentional action by him, but I was reminded that what I leave on the internet is public and available for the users of the internet for good. Peer surveillance may look like this, or it may be more discrete, but in our generation we are all guilty of viewing others' profiles and building our own to have something for others to survey.`,
+      answer: "Human"
+    }
+  ];
+
+  const group2 = [
+    {
+      text: `Within maybe ten minutes of googling "stress and caffeine" for my biology homework, my Instagram feed was suddenly full of ads for matcha supplements and anxiety apps. I hadn't said anything out loud, hadn't posted anything—just searched once. It felt genuinely unsettling, like something was reading over my shoulder.`,
+      answer: "AI"
+    },
+    {
+      text: `We talked in class about algorithmic governance, and I think that's exactly what this is. Spotify wasn't waiting for me to want something—it was nudging me toward a behavior based on a profile it had built. There was no human involved; a system made a judgment about who I am and what I need.`,
+      answer: "AI"
+    },
+    {
+      text: `My moment happened on a Sunday night in my room in Swanson Hall. I was doom-scrolling Twitter and I noticed my "For You" feed had shifted—more posts about a specific senate race I'd looked up once for a paper. Over the next few days it kept narrowing. I hadn't followed anyone new. The algorithm had just decided that was a version of me worth feeding. We learned about filter bubbles in class, and this was a textbook example.`,
+      answer: "AI"
+    },
+    {
+      text: `I was on a clinical rotation shadow at CHI Health and I had to badge in and out of every floor, every supply room, every patient area. At the time I was focused on not getting lost. But sitting in class the next week, I realized every one of those badge swipes was a timestamped record of exactly where I was and for how long. The hospital knows my movement patterns better than I do.`,
+      answer: "AI"
+    },
+    {
+      text: `As someone studying CS, I thought I'd come into this class already knowing the relevant stuff. The moment that actually humbled me was when I turned on my iPhone's "Significant Locations" setting—buried deep in privacy settings—and saw that it had a complete log of everywhere I'd been, labeled, with visit frequency, going back over a year.`,
+      answer: "AI"
+    },
+    {
+      text: `I was in the library—the Reinert Alumni Library, third floor—and I realized I'd unconsciously chosen a desk that faced the wall rather than the open floor. I always do this. I find the open seating stressful. After our class on`,
+      answer: "AI"
+    },
+    {
+      text: `I was at Walgreens on 24th Street picking up cold medicine and I got a popup asking me to sign into my Balance Rewards account for discounts. I said no, I never do. But then the cashier asked for my phone number anyway, and without thinking I gave it, because there was a line behind me and I was tired. Walgreens now has a record linking my phone number to the purchase of DayQuil on a Tuesday in February. That bothered me more than it should have.`,
+      answer: "AI"
+    },
+    {
+      text: `My moment was honestly in this class. We were doing the activity where we audited our phone permissions, and I saw that an app I use for free PDF reading had access to my microphone and contacts. I hadn't opened that app in six months. We've talked about informed consent a lot, and I've been turning that over in the context of my major. Social work involves building trust with people who've often had bad experiences with institutions. Many of our clients are heavily surveilled—by child welfare systems, by parole conditions, by public benefits programs—in ways that middle-class people simply aren't.`,
+      answer: "AI"
+    },
+    {
+      text: `I was checking my credit score on Credit Karma and noticed it showed me "personalized" credit card offers. Which, fine, I expected that. But it also had a section labeled "factors that could improve your score" that listed specific behaviors—pay this balance by this date, lower this utilization by this amount. It was specific enough that it clearly wasn't generic advice. Something had analyzed my actual pattern of behavior and was nudging me toward specific actions. We covered nudge theory in the context of surveillance and I think this is a clean example—the platform isn't forcing me to do anything, but it's designing a choice architecture that makes certain behaviors feel obvious and others feel like deviations.`,
+      answer: "AI"
+    },
+    {
+      text: `I flew home to Minneapolis for fall break and got flagged for additional screening at TSA. I'm Black, I was wearing a headscarf that day for no particular reason, I was traveling alone. I don't know if any of those factors mattered. That's almost the point—I'll never know. The system isn't transparent about why it selects people, and the asymmetry of information is itself a form of power.`,
+      answer: "AI"
+    },
+    {
+      text: `I posted a photo from Harper Center to my Instagram story—just the atrium, nice light—and within a few hours I had a location-tagged ad for the Creighton bookstore sale. This happens all the time, but this time I actually stopped and traced it: Instagram detected my location tag, matched it to a university geo-fence, cross-referenced that I follow Creighton's account, and served me a hyper-local ad. It was almost impressive.`,
+      answer: "AI"
+    },
+    {
+      text: `I was filling out my FAFSA for next year and got stuck on a section where I had to verify my identity through a third-party service that required a selfie and a scan of my driver's license. To get federal financial aid—which I need—I had to submit biometric data to a private company. That felt coercive in a way that was hard to articulate until we got to the unit on institutional surveillance.`,
+      answer: "AI"
+    },
+    {
+      text: `I was at the 10pm mass at St. John's and I noticed afterward that my Google Maps timeline had logged it—location: Creighton University Chapel, duration: approximately one hour, on a Thursday night. There's something that felt specifically violating about that. My religious practice is among the most private things about my life, and it's being quietly recorded by an app I use for directions. My maps app treats the chapel the same as the Harper Center dining hall.`,
+      answer: "AI"
+    },
+    {
+      text: `I was researching a topic for our class paper—specifically looking up information about data brokers—and got served an ad for a privacy protection service within twenty minutes. The surveillance infrastructure had watched me researching surveillance and tried to monetize my concern. The recursive irony was not lost on me. We've covered data brokerage as an industry, and the experience made it feel real in a new way—there are companies whose entire business model is the aggregation and resale of behavioral data, and they're running in the background of ordinary research.`,
+      answer: "AI"
+    },
+    {
+      text: `I signed up for a research study through Creighton's psychology department that paid $15 for an hour of surveys. In the debrief I found out that one part of the study had tracked my eye movements using the laptop camera to measure where I looked on the screen. I had consented to it—it was in the form I signed—but I hadn't really understood that. The consent form used the phrase "behavioral measurement" and I didn't map that to someone tracking my eyes.`,
+      answer: "AI"
+    },
+    {
+      text: `I was looking at apartments for next year—off campus, near the Benson neighborhood—and after a few hours of Zillow browsing I noticed that the ads on every other site I visited had recalibrated. The rental prices in the ads started higher than my search range, and I found myself wondering later if I'd been shown a higher price range because of behavioral signals I'd given off—searches, click patterns, time spent on listings. I couldn't confirm it. That uncertainty might be the point.`,
+      answer: "AI"
+    },
+    {
+      text: `I student-teach at a local elementary school one afternoon a week, and the classroom I'm in uses an app called ClassDojo where teachers can give students real-time "points" for behavior—participation, kindness, on task, and so on. Parents get notifications. I've been using it without thinking about it. But after our class session on surveillance in schools I went back and looked at the data it generates: a granular behavioral record for every child, timestamped, categorized, and stored in the cloud, starting at age five or six.`,
+      answer: "AI"
+    },
+    {
+      text: `Since the start of this class, the moment I keep replaying happened in the Skutt Student Center when I swiped into the dining area with my card and immediately got a push notification on my phone about "meal plan balance" and "popular dining times." It wasn't scary, but it was this weird little feeling like the campus already knew where I was, what I was about to do, and how I should do it. I remember standing there by the soda machines, looking around at everyone in line, and thinking: I'm not just eating lunch. I'm producing data. Even later that day, when I walked past the info desk and then over toward the bookstore, I caught myself wondering what else got logged—where I went, how long I stayed, if I came back.`,
+      answer: "AI"
+    },
+    {
+      text: `The specific moment that hit me was at the Kiewit Fitness Center. I'm a first-year exercise science major, and I've been trying to go three times a week. One day I checked in, and my Apple Watch buzzed with "workout started," then later it gave me a weekly summary like I was being graded. It sounds dumb, but I felt proud and judged at the same time—like if I missed a day I'd disappointed an invisible coach. Even walking back through campus afterward, I kept thinking about how many systems were measuring me: the watch, the gym check-in, the phone tracking steps, Spotify tracking what I listen to while I lift. It wasn't one scary thing. It was the stack of it.`,
+      answer: "AI"
+    },
+    {
+      text: `The gaze isn't only a person staring at me. It's the feeling of being knowable and trackable, even when nobody's actively watching in real time. Function creep is when a system built for one purpose (like secure logins) quietly expands into other uses (like profiling activity, measuring engagement, predicting needs). Add dataveillance, and you get a campus life where convenience and security create constant data trails. The class has made me more aware of how "normal" it feels to be tracked. I'm not panicking, but I'm less naive: every "helpful" feature—autofill, suggestions, "continue where you left off"—is also a tiny surveillance tool. It's like the trade-off is baked into daily college life.`,
+      answer: "AI"
+    },
+    {
+      text: `The moment I felt tracked was in a way I didn't expect: I was walking into the dining hall and I realized my whole day is basically "tap to enter" everything. Tap into the dorm, tap for food, tap for printing. Standing there with my card in my hand, it hit me that these taps are basically a timeline of me. Like if someone wanted to know my routine, it wouldn't even be hard. I didn't freak out, but I had this split-second thought: I'm predictable. And the campus probably knows it better than I do.`,
+      answer: "AI"
+    },
+    {
+      text: `I had a moment in the Harper Center after class where I was checking my email and I saw one of those "security alert: new sign-in" messages. My first reaction was "oh no, did someone hack me?" But then it was just me logging in on a different device in a different building. Still, it made me aware that every move has a trail—IP address, location, device info. And once you see the trail, you can't unsee it. Later that day, Google was like "we noticed unusual activity" and it was just me being a normal college student moving around campus. It's weird that normal movement can look "suspicious" to a system.`,
+      answer: "AI"
+    }
+  ];
+
+  /* ───────────────────────────────────────────────
+     QUIZ LOGIC
+  ─────────────────────────────────────────────── */
+  let quizQuestions = [];
+  let currentIndex = 0;
+  let score = 0;
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function startQuiz() {
+    quizQuestions = shuffle([
+      ...shuffle(group1).slice(0, 5),
+      ...shuffle(group2).slice(0, 5)
+    ]);
+    currentIndex = 0;
+    score = 0;
+    show('quizScreen');
+    hide('startScreen');
+    showQuestion();
+  }
+
+  function showQuestion() {
+    const q = quizQuestions[currentIndex];
+    const total = quizQuestions.length;
+
+    document.getElementById('passageText').textContent = q.text;
+    document.getElementById('questionCount').textContent =
+      `Question ${currentIndex + 1} of ${total}`;
+    document.getElementById('progressFill').style.width =
+      `${(currentIndex / total) * 100}%`;
+
+    // Reset buttons
+    ['humanBtn', 'aiBtn'].forEach(id => {
+      const btn = document.getElementById(id);
+      btn.className = 'choice-btn';
+      btn.disabled = false;
+    });
+
+    // Reset feedback
+    const fb = document.getElementById('feedbackBox');
+    fb.className = 'feedback-box';
+    fb.innerHTML = '';
+
+    // Hide next button
+    document.getElementById('nextBtn').classList.add('hidden');
+
+    // Scroll passage to top
+    document.getElementById('passageText').scrollTop = 0;
+  }
+
+  function selectAnswer(chosen) {
+    const q = quizQuestions[currentIndex];
+    const isCorrect = chosen === q.answer;
+
+    const humanBtn = document.getElementById('humanBtn');
+    const aiBtn   = document.getElementById('aiBtn');
+    humanBtn.disabled = true;
+    aiBtn.disabled   = true;
+
+    const chosenBtn  = chosen === 'Human' ? humanBtn : aiBtn;
+    const correctBtn = q.answer === 'Human' ? humanBtn : aiBtn;
+
+    if (isCorrect) {
+      chosenBtn.classList.add('correct');
+      score++;
+    } else {
+      chosenBtn.classList.add('incorrect');
+      correctBtn.classList.add('reveal');
+    }
+
+    const fb = document.getElementById('feedbackBox');
+    if (isCorrect) {
+      fb.className = 'feedback-box show correct';
+      fb.innerHTML = `✓ Correct! This was written by a <strong>${q.answer}</strong>.`;
+    } else {
+      fb.className = 'feedback-box show incorrect';
+      fb.innerHTML = `✗ Incorrect. This was written by a <strong>${q.answer}</strong>.`;
+    }
+
+    const nextBtn = document.getElementById('nextBtn');
+    nextBtn.classList.remove('hidden');
+    nextBtn.textContent =
+      currentIndex === quizQuestions.length - 1 ? 'See Results →' : 'Next Question →';
+  }
+
+  function nextQuestion() {
+    currentIndex++;
+    if (currentIndex >= quizQuestions.length) {
+      showResults();
+    } else {
+      showQuestion();
+    }
+  }
+
+  function showResults() {
+    document.getElementById('progressFill').style.width = '100%';
+    hide('quizScreen');
+    show('resultsScreen');
+
+    document.getElementById('scoreNum').textContent = score;
+
+    const pct = score / quizQuestions.length;
+    let heading, msg;
+    if (pct === 1) {
+      heading = 'Perfect Score! 🎉';
+      msg = 'Flawless — you can spot the difference between human and AI writing every time.';
+    } else if (pct >= 0.8) {
+      heading = 'Excellent! 🌟';
+      msg = "You've got a sharp eye for AI-generated text. Only a couple slipped past you.";
+    } else if (pct >= 0.6) {
+      heading = 'Good Job! 👍';
+      msg = 'More right than wrong — this is genuinely tricky. Give it another go!';
+    } else if (pct >= 0.4) {
+      heading = 'Not Bad 🤔';
+      msg = 'AI writing has come a long way. Try again and see if your score improves!';
+    } else {
+      heading = 'Keep Practicing! 💪';
+      msg = 'AI can be surprisingly convincing. Play again — the questions randomize each time!';
+    }
+
+    document.getElementById('resultsHeading').textContent = heading;
+    document.getElementById('resultsMsg').textContent = msg;
+  }
+
+  function restartQuiz() {
+    hide('resultsScreen');
+    show('startScreen');
+    document.getElementById('progressFill').style.width = '0%';
+  }
+
+  function show(id) { document.getElementById(id).classList.remove('hidden'); }
+  function hide(id) { document.getElementById(id).classList.add('hidden'); }
+</script>
+</body>
+</html>
